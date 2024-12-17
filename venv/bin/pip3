@@ -1,4 +1,4 @@
-#!/home/ahmed/Desktop/dphish/venv/bin/python3
+#!/home/ahmed/Desktop/dphish/ipinfo/venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
