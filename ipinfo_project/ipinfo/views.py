@@ -1,39 +1,32 @@
 from django.views.decorators.csrf import csrf_exempt
+import json
 from django.shortcuts import render
 from django.http import JsonResponse
-import re
+from ipinfo.tasks import process_ips
+from ipinfo.utils import is_valid_ip
 
 # Create your views here.
-
-# Function to validate IP addresses
-def is_valid_ip(ip):
-    ip_pattern = re.compile(
-        r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$"
-    )
-    return re.match(ip_pattern, ip)
-
-@csrf_exempt 
+@csrf_exempt
 def submit_ips(request):
     if request.method == 'POST':
-        ip_list = request.POST.getlist('ips')  # Expecting a list of IPs
-        invalid_ips = [ip for ip in ip_list if not is_valid_ip(ip)]
+        try:
+            # Parse JSON payload
+            data = json.loads(request.body)
+            ips = data.get('ips', [])
 
-        if invalid_ips:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Invalid IPs found',
-                'invalid_ips': invalid_ips
-            }, status=400)
+
+            # Validate IPs
+            valid_ips = [ip for ip in ips if is_valid_ip(ip)]
+
+            if valid_ips:
+                process_ips.delay(valid_ips)  # Add valid IPs to the Celery task queue
+                return JsonResponse({"status": "success", "message": "IPs submitted successfully", "ips": valid_ips})
+
+            return JsonResponse({"status": "error", "message": "No valid IPs submitted."})
+        except json.JSONDecodeError:
+            return JsonResponse({"status": "error", "message": "Invalid JSON payload."}, status=400)
         
-
-        # Add logic to process the IPs with Celery (to be added in the next step)
-        return JsonResponse({
-            'status': 'success',
-            'message': 'IPs submitted successfully',
-            'ips': ip_list
-        })
-
-    return JsonResponse({
-        'status': 'error',
-        'message': 'Only POST requests are allowed.'
-    }, status=405)
+    elif request.method == 'GET':
+        return render(request, "submit_ips.html")
+    
+    return JsonResponse({"status": "error", "message": "Invalid request method."}, status=405)

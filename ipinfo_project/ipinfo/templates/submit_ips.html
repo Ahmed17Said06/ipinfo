@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Info Submission</title>
+</head>
+<body>
+
+    <h1>Submit IPs</h1>
+    
+    <input type="text" id="ip-input" placeholder="Enter IPs (comma separated)">
+    <button onclick="submitIps()">Submit IPs</button>
+    
+    <div id="response"></div>
+
+    <script>
+        function submitIps() {
+            const ipInput = document.getElementById('ip-input').value;
+            const ips = ipInput.split(',').map(ip => ip.trim());  // Split and trim IPs
+            
+            fetch('http://127.0.0.1:8000/ipinfo/submit-ips/', {  // Replace with your API URL
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ips: ips }),  // Send the IPs as a JSON payload
+            })
+            .then(response => response.json())  // Parse JSON response
+            .then(data => {
+                document.getElementById('response').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    </script>
+
+</body>
+</html>
