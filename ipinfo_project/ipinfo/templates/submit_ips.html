@@ -14,12 +14,14 @@
     
     <div id="response"></div>
 
+    <div id="result"></div> <!-- For showing task updates -->
+
     <script>
         function submitIps() {
             const ipInput = document.getElementById('ip-input').value;
             const ips = ipInput.split(',').map(ip => ip.trim());  // Split and trim IPs
-            
-            fetch('http://127.0.0.1:8000/ipinfo/submit-ips/', {  // Replace with your API URL
+
+            fetch('/ipinfo/submit-ips/', {  // Submit IPs to Django
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -28,11 +30,64 @@
             })
             .then(response => response.json())  // Parse JSON response
             .then(data => {
-                document.getElementById('response').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                if (data.status === 'success') {
+                    document.getElementById('response').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+
+                    // Listen for task updates for each task_id
+                    data.task_ids.forEach(taskId => {
+                        listenForTaskResult(taskId); // Listen for each task update
+                    });
+                } else {
+                    document.getElementById('response').innerHTML = `Error: ${data.message}`;
+                }
             })
             .catch(error => {
                 console.error('Error:', error);
             });
+        }
+
+        function listenForTaskResult(taskId) {
+            const eventSource = new EventSource(`/ipinfo/task_result/${taskId}/`); // Connect to SSE endpoint
+            
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+
+                console.log("Received task result:", data); // Log received data for debugging
+
+                // Append each new result to the result div
+                const resultDiv = document.getElementById('result');
+                resultDiv.innerHTML += formatResult(data);  // Append instead of replacing
+            };
+
+            eventSource.onerror = function(error) {
+                console.error('Error receiving task updates:', error);
+                eventSource.close();  // Close the connection on error
+            };
+        }
+
+
+        function formatResult(data) {
+            // If the result contains an IP and info, format it
+            if (data.ip && data.info) {
+                return `
+                    <div>
+                        <strong>IP:</strong> ${data.ip}<br>
+                        <strong>Info:</strong> ${JSON.stringify(data.info, null, 2)}
+                    </div>
+                `;
+            }
+
+            // If the result contains an error, format it
+            if (data.error) {
+                return `
+                    <div style="color: red;">
+                        <strong>Error:</strong> ${data.error}
+                    </div>
+                `;
+            }
+
+            // Default case: format the result as a preformatted block
+            return `<pre>${JSON.stringify(data, null, 2)}</pre>`;
         }
     </script>
 
