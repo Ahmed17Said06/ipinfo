@@ -1,25 +1,26 @@
-from celery import shared_task, Celery
+from celery import shared_task
 import aiohttp
 import os
-from asgiref.sync import async_to_sync
 from ipinfo.utils import is_valid_ip
 import traceback
+from asgiref.sync import async_to_sync
 
 
 BASE_URL = os.getenv("IPINFO_API_URL", "https://ipinfo.io")
+
 
 @shared_task(bind=True)
 def process_ips(self, ips):
     """
     Process a list of IPs one by one and send updates incrementally.
-    This task handles each IP synchronously to stream updates to the frontend.
+    This task handles each IP synchronously by awaiting an async function call.
     """
     results = []
     for ip in ips:
         if is_valid_ip(ip):
-            # Trigger the `process_ip` task for each IP and wait for completion
-            ip_result = process_ip.apply(args=[ip])
-            results.append(ip_result.result)
+            # Use async_to_sync to run the async function synchronously
+            ip_result = async_to_sync(process_ip)(ip)
+            results.append(ip_result)
 
             # Update task state incrementally to send progress updates
             self.update_state(
@@ -34,13 +35,14 @@ def process_ips(self, ips):
             )
     return results
 
+
 @shared_task(bind=True)
 def process_ip(self, ip):
     """
-    Fetch information for a single IP address.
+    Fetch information for a single IP address synchronously.
     """
     try:
-        # Run the async function synchronously
+        # Use async_to_sync to call async fetch function
         result = async_to_sync(fetch_ip_info)(ip)
         return result
     except Exception as e:
@@ -56,7 +58,7 @@ def process_ip(self, ip):
 
 async def fetch_ip_info(ip):
     """
-    Fetch information about an IP address using aiohttp.
+    Fetch information about an IP address using aiohttp asynchronously.
     """
     try:
         async with aiohttp.ClientSession() as session:
