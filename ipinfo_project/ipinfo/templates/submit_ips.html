@@ -3,72 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IP Info Submission</title>
+    <title>Submit IPs</title>
 </head>
 <body>
-
     <h1>Submit IPs</h1>
-    
-    <input type="text" id="ip-input" placeholder="Enter IPs (comma separated)">
-    <button onclick="submitIps()">Submit IPs</button>
-    
-    <div id="response"></div>
-
-    <div id="result"></div> <!-- For showing task updates -->
+    <form id="ipForm">
+        <textarea id="ips" rows="10" cols="50" placeholder="Enter IPs separated by commas"></textarea><br>
+        <button type="submit">Submit</button>
+    </form>
+    <div id="results"></div>
 
     <script>
-        function submitIps() {
-            const ipInput = document.getElementById('ip-input').value;
-            const ips = ipInput.split(',').map(ip => ip.trim());  // Split and trim IPs
-
-            fetch('/ipinfo/submit-ips/', {  // Submit IPs to Django
+        document.getElementById('ipForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const ips = document.getElementById('ips').value.split(',').map(ip => ip.trim());
+            fetch('/ipinfo/submit-ips/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ ips: ips }),  // Send the IPs as a JSON payload
+                body: JSON.stringify({ ips: ips }),
             })
-            .then(response => response.json())  // Parse JSON response
+            .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    document.getElementById('response').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
-
-                    // Listen for task updates for each task_id
-                    data.task_ids.forEach(taskId => {
-                        listenForTaskResult(taskId); // Listen for each task update
-                    });
+                    const taskIds = data.task_ids;
+                    const eventSource = new EventSource(`/ipinfo/stream/?task_ids=${taskIds.join(',')}`);
+                    eventSource.onmessage = function(event) {
+                        const result = JSON.parse(event.data);
+                        document.getElementById('results').innerHTML += formatResult(result);
+                    };
                 } else {
-                    document.getElementById('response').innerHTML = `Error: ${data.message}`;
+                    document.getElementById('results').innerHTML = `<div style="color: red;"><strong>Error:</strong> ${data.message}</div>`;
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                document.getElementById('results').innerHTML = `<div style="color: red;"><strong>Error:</strong> ${error.message}</div>`;
             });
-        }
-
-        function listenForTaskResult(taskId) {
-            const eventSource = new EventSource(`/ipinfo/task_result/${taskId}/`); // Connect to SSE endpoint
-            
-            eventSource.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-
-                console.log("Received task result:", data); // Log received data for debugging
-
-                // Append each new result to the result div
-                const resultDiv = document.getElementById('result');
-                resultDiv.innerHTML += formatResult(data);  // Append instead of replacing
-            };
-
-            eventSource.onerror = function(error) {
-                console.error('Error receiving task updates:', error);
-                eventSource.close();  // Close the connection on error
-            };
-        }
-
+        });
 
         function formatResult(data) {
-            // If the result contains an IP and info, format it
-            if (data.ip && data.info) {
+            if (data.info) {
                 return `
                     <div>
                         <strong>IP:</strong> ${data.ip}<br>
@@ -77,7 +52,6 @@
                 `;
             }
 
-            // If the result contains an error, format it
             if (data.error) {
                 return `
                     <div style="color: red;">
@@ -86,10 +60,8 @@
                 `;
             }
 
-            // Default case: format the result as a preformatted block
             return `<pre>${JSON.stringify(data, null, 2)}</pre>`;
         }
     </script>
-
 </body>
 </html>

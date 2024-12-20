@@ -1,39 +1,23 @@
-
-# 1.1.1.1, 8.8.8.8, 90.56.47.100,222.186.13.131 ,218.92.0.76 ,196.242.178.111 ,115.79.87.21, 14.241.110.89, 8.208.9.11 ,198.235.24.226 ,193.3.53.3
-
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render
 from django.http import JsonResponse, StreamingHttpResponse
 import json
 from ipinfo.tasks import process_ip
 from ipinfo.utils import is_valid_ip
-import time
+import redis
+import os
 
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+redis_client = redis.StrictRedis.from_url(REDIS_URL)
 
 def event_stream(task_ids):
-    """
-    Stream results for each IP as they are processed.
-    """
-    for task_id in task_ids:
-        task_result = process_ip.AsyncResult(task_id)
+    pubsub = redis_client.pubsub()
+    pubsub.subscribe('ip_results')
 
-        # Polling while the task is not ready
-        while not task_result.ready():
-            # Optionally sleep to reduce CPU usage
-            time.sleep(0.1)
-
-        # Once the task is finished, yield its result to the client
-        result = task_result.result
-        if isinstance(result, dict):
+    for message in pubsub.listen():
+        if message['type'] == 'message':
+            result = json.loads(message['data'])
             yield f"data: {json.dumps(result)}\n\n"
-        else:
-            yield f"data: {json.dumps({'error': 'Invalid result format'})}\n\n"
-
-def get_task_result(request, task_id):
-    """
-    Return the result of a specific task as a Server-Sent Event stream.
-    """
-    return StreamingHttpResponse(event_stream([task_id]), content_type='text/event-stream')
 
 @csrf_exempt
 def submit_ips(request):
@@ -47,7 +31,6 @@ def submit_ips(request):
             valid_ips = [ip for ip in ips if is_valid_ip(ip)]
 
             if valid_ips:
-                # Submit each valid IP as a Celery task and collect task IDs
                 task_ids = []
                 for ip in valid_ips:
                     task_result = process_ip.delay(ip)
@@ -55,11 +38,45 @@ def submit_ips(request):
 
                 return JsonResponse({"status": "success", "task_ids": task_ids})
             else:
-                return JsonResponse({"status": "error", "message": "No valid IPs submitted."})
+                return JsonResponse({"status": "error", "message": "No valid IPs provided."})
         except json.JSONDecodeError:
-            return JsonResponse({"status": "error", "message": "Invalid JSON payload."}, status=400)
+            return JsonResponse({"status": "error", "message": "Invalid JSON payload."})
         
     elif request.method == 'GET':
         return render(request, "submit_ips.html")  # Render the form for GET request
+    
+    return JsonResponse({"status": "error", "message": "Invalid request method."})
 
-    return JsonResponse({"status": "error", "message": "Invalid request method."}, status=405)
+def stream_view(request):
+    task_ids = request.GET.getlist('task_ids')  # List of task IDs to stream
+    response = StreamingHttpResponse(event_stream(task_ids), content_type='text/event-stream')
+    return response
+
+def get_task_result(request, task_id):
+    task_result = process_ip.AsyncResult(task_id)
+    if task_result.state == 'PENDING':
+        response = {
+            'state': task_result.state,
+            'current': 0,
+            'total': 1,
+            'status': 'Pending...'
+        }
+    elif task_result.state != 'FAILURE':
+        response = {
+            'state': task_result.state,
+            'current': task_result.info.get('current', 0),
+            'total': task_result.info.get('total', 1),
+            'status': task_result.info.get('status', ''),
+            'result': task_result.info.get('results', [])
+        }
+        if 'result' in task_result.info:
+            response['result'] = task_result.info['result']
+    else:
+        # something went wrong in the background job
+        response = {
+            'state': task_result.state,
+            'current': 1,
+            'total': 1,
+            'status': str(task_result.info),  # this is the exception raised
+        }
+    return JsonResponse(response)

@@ -4,5 +4,6 @@ from . import views
 
 urlpatterns = [
     path('submit-ips/', views.submit_ips, name='submit_ips'),
+    path('stream/', views.stream_view, name='stream'),
     path('task_result/<task_id>/', views.get_task_result, name='task_result'),  # Keep only this
 ]
