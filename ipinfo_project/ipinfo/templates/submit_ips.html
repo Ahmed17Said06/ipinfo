@@ -4,6 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Submit IPs</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            color: #bb86fc;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            border: 1px solid #bb86fc;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #bb86fc;
+            color: #121212;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #9b6bdb;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        .result {
+            background-color: #1e1e1e;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .result.error {
+            border-left: 5px solid #cf6679;
+        }
+        .result.success {
+            border-left: 5px solid #03dac6;
+        }
+        .result.warning {
+            border-left: 5px solid #ffeb3b;
+        }
+        .result pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
 </head>
 <body>
     <h1>Submit IPs</h1>
@@ -14,9 +68,20 @@
     <div id="results"></div>
 
     <script>
+        let eventSource;
+
         document.getElementById('ipForm').addEventListener('submit', function(event) {
             event.preventDefault();
             const ips = document.getElementById('ips').value.split(',').map(ip => ip.trim());
+
+            // Clear previous results
+            document.getElementById('results').innerHTML = '';
+
+            // Close any existing EventSource connection
+            if (eventSource) {
+                eventSource.close();
+            }
+
             fetch('/ipinfo/submit-ips/', {
                 method: 'POST',
                 headers: {
@@ -28,39 +93,55 @@
             .then(data => {
                 if (data.status === 'success') {
                     const taskIds = data.task_ids;
-                    const eventSource = new EventSource(`/ipinfo/stream/?task_ids=${taskIds.join(',')}`);
+                    eventSource = new EventSource(`/ipinfo/stream/?task_ids=${taskIds.join(',')}`);
                     eventSource.onmessage = function(event) {
                         const result = JSON.parse(event.data);
                         document.getElementById('results').innerHTML += formatResult(result);
                     };
                 } else {
-                    document.getElementById('results').innerHTML = `<div style="color: red;"><strong>Error:</strong> ${data.message}</div>`;
+                    document.getElementById('results').innerHTML = `<div class="result error"><strong>Error:</strong> ${data.message}</div>`;
                 }
             })
             .catch(error => {
-                document.getElementById('results').innerHTML = `<div style="color: red;"><strong>Error:</strong> ${error.message}</div>`;
+                document.getElementById('results').innerHTML = `<div class="result error"><strong>Error:</strong> ${error.message}</div>`;
             });
         });
 
         function formatResult(data) {
             if (data.info) {
+                if (data.info.bogon) {
+                    return `
+                        <div class="result warning">
+                            <strong>IP:</strong> ${data.ip}<br>
+                            <strong>Bogon:</strong> true
+                        </div>
+                    `;
+                }
                 return `
-                    <div>
+                    <div class="result success">
                         <strong>IP:</strong> ${data.ip}<br>
-                        <strong>Info:</strong> ${JSON.stringify(data.info, null, 2)}
+                        <strong>Hostname:</strong> ${data.info.hostname}<br>
+                        <strong>City:</strong> ${data.info.city}<br>
+                        <strong>Region:</strong> ${data.info.region}<br>
+                        <strong>Country:</strong> ${data.info.country}<br>
+                        <strong>Location:</strong> ${data.info.loc}<br>
+                        <strong>Organization:</strong> ${data.info.org}<br>
+                        <strong>Postal:</strong> ${data.info.postal}<br>
+                        <strong>Timezone:</strong> ${data.info.timezone}<br>
                     </div>
                 `;
             }
 
             if (data.error) {
                 return `
-                    <div style="color: red;">
+                    <div class="result error">
+                        <strong>IP:</strong> ${data.ip}<br>
                         <strong>Error:</strong> ${data.error}
                     </div>
                 `;
             }
 
-            return `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            return `<div class="result"><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
         }
     </script>
 </body>
