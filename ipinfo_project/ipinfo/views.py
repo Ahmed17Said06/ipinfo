@@ -29,6 +29,7 @@ def submit_ips(request):
 
             # Validate IPs
             valid_ips = [ip for ip in ips if is_valid_ip(ip)]
+            invalid_ips = [ip for ip in ips if not is_valid_ip(ip)]
 
             if valid_ips:
                 task_ids = []
@@ -36,9 +37,13 @@ def submit_ips(request):
                     task_result = process_ip.delay(ip)
                     task_ids.append(task_result.id)
 
-                return JsonResponse({"status": "success", "task_ids": task_ids})
+                response_data = {"status": "success", "task_ids": task_ids}
+                if invalid_ips:
+                    response_data["invalid_ips"] = invalid_ips
+
+                return JsonResponse(response_data)
             else:
-                return JsonResponse({"status": "error", "message": "No valid IPs provided."})
+                return JsonResponse({"status": "error", "message": "No valid IPs provided.", "invalid_ips": invalid_ips})
         except json.JSONDecodeError:
             return JsonResponse({"status": "error", "message": "Invalid JSON payload."})
         

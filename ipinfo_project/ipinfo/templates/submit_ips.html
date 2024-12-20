@@ -93,6 +93,11 @@
             .then(data => {
                 if (data.status === 'success') {
                     const taskIds = data.task_ids;
+                    if (data.invalid_ips) {
+                        data.invalid_ips.forEach(ip => {
+                            document.getElementById('results').innerHTML += formatResult({ ip: ip, error: "Invalid IP" });
+                        });
+                    }
                     eventSource = new EventSource(`/ipinfo/stream/?task_ids=${taskIds.join(',')}`);
                     eventSource.onmessage = function(event) {
                         const result = JSON.parse(event.data);
@@ -100,6 +105,11 @@
                     };
                 } else {
                     document.getElementById('results').innerHTML = `<div class="result error"><strong>Error:</strong> ${data.message}</div>`;
+                    if (data.invalid_ips) {
+                        data.invalid_ips.forEach(ip => {
+                            document.getElementById('results').innerHTML += formatResult({ ip: ip, error: "Invalid IP" });
+                        });
+                    }
                 }
             })
             .catch(error => {
