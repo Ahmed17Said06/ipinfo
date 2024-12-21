@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile.celery
+    volumes:
+      - .:/code
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - C_FORCE_ROOT=true
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile.celery
+    command: celery -A ipinfo_project flower --port=5555 --broker=redis://redis:6379/0
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379/0
