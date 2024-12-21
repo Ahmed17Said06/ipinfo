@@ -33,3 +33,8 @@ The IP Information Fetcher is a Django-based application that handles background
 
 ![HFywRK3sRBUjsNUSUmVtKP](https://github.com/user-attachments/assets/3e8a5e76-f119-4605-899d-3ecb2c3861af)
 
+## Component Diagram
+
+![component drawio](https://github.com/user-attachments/assets/43207720-2a68-4757-9c26-509dafbba29e)
+
+
