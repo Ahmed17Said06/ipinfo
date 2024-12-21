@@ -80,3 +80,13 @@
 2024-12-21 00:40:36,938 INFO waiting for celery_worker1, celery_worker2 to die
 2024-12-21 00:40:37,878 INFO stopped: celery_worker2 (exit status 0)
 2024-12-21 00:40:38,892 INFO stopped: celery_worker1 (exit status 0)
+2024-12-21 01:16:12,192 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2024-12-21 01:16:12,194 INFO supervisord started with pid 1
+2024-12-21 01:16:13,199 INFO spawned: 'celery_worker1' with pid 7
+2024-12-21 01:16:13,202 INFO spawned: 'celery_worker2' with pid 8
+2024-12-21 01:16:23,849 INFO success: celery_worker1 entered RUNNING state, process has stayed up for > than 10 seconds (startsecs)
+2024-12-21 01:16:23,849 INFO success: celery_worker2 entered RUNNING state, process has stayed up for > than 10 seconds (startsecs)
+2024-12-21 01:18:19,085 WARN received SIGTERM indicating exit request
+2024-12-21 01:18:19,085 INFO waiting for celery_worker1, celery_worker2 to die
+2024-12-21 01:18:19,534 INFO stopped: celery_worker2 (exit status 0)
+2024-12-21 01:18:20,560 INFO stopped: celery_worker1 (exit status 0)
