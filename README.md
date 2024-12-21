@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The IP Information Fetcher is a Django-based application designed to handle background tasks, performance considerations, and notifications. The main functionality is to fetch information about a list of IP addresses asynchronously and provide real-time updates to the user.
+The IP Information Fetcher is a Django-based application that handles background tasks, performance considerations, and notifications. The main functionality is to fetch information about a list of IP addresses asynchronously and provide real-time updates to the user.
 
 ## Features
 
@@ -25,4 +25,6 @@ The IP Information Fetcher is a Django-based application designed to handle back
 1. Clone the repository:
    ```bash
    git clone <repository_url>
-   cd <repository_directory>
+   cd ipinfo/ipinfo_project/
+   docker-compose up --build
+   
