@@ -27,4 +27,9 @@ The IP Information Fetcher is a Django-based application that handles background
    git clone <repository_url>
    cd ipinfo/ipinfo_project/
    docker-compose up --build
-   
+
+
+## FLow Diagram
+
+![HFywRK3sRBUjsNUSUmVtKP](https://github.com/user-attachments/assets/3e8a5e76-f119-4605-899d-3ecb2c3861af)
+
