@@ -20,6 +20,8 @@ The IP Information Fetcher is a Django-based application that handles background
 
 ## Installation
 
+### Option 1: Using GitHub Repository
+
    ```bash
    git clone <repository_url>
    cd ipinfo/ipinfo_project/
