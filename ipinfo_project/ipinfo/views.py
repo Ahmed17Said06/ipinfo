@@ -82,6 +82,6 @@ def get_task_result(request, task_id):
             'state': task_result.state,
             'current': 1,
             'total': 1,
-            'status': str(task_result.info),  # this is the exception raised
+            'status': str(task_result.info),
         }
     return JsonResponse(response)

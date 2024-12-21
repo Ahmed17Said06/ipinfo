@@ -40,7 +40,7 @@ def process_ip(self, ip):
         redis_client.publish('ip_results', json.dumps(result))
         return result
     except Exception as e:
-        # Log the error with traceback for better debugging
+        # Log the error with traceback for debugging
         error_message = f"Error processing IP {ip}: {str(e)}"
         traceback_details = traceback.format_exc()
         error_result = {

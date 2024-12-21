@@ -1,9 +1,9 @@
 # ipinfo_project/ipinfo/utils.py
 import re
 
-# Function to validate IP addresses
+# Validate IP addresses
 def is_valid_ip(ip):
-    if not ip:  # Reject empty strings or None values
+    if not ip: 
         return False
     ip_pattern = re.compile(r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$")
     if re.match(ip_pattern, ip):
