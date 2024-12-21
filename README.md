@@ -20,13 +20,11 @@ The IP Information Fetcher is a Django-based application that handles background
 
 ## Installation
 
-### Option 1: Using GitHub Repository
-
+- clone and run the docker-compose file
    ```bash
    git clone <repository_url>
    cd ipinfo/ipinfo_project/
    docker-compose up --build
-
 
 ## FLow Diagram
 
